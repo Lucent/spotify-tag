@@ -5,7 +5,7 @@ require 'secrets.php';
 $session = new SpotifyWebAPI\Session(
 	$CLIENT_ID,
 	$CLIENT_SECRET,
-	'https://dayah.com/spotify-tag/example.php'
+	'https://dayah.com/spotify-tag/'
 );
 
 $api = new SpotifyWebAPI\SpotifyWebAPI();
@@ -21,6 +21,9 @@ if (isset($_GET['code'])) {
 	get_playlists_all($api, "/v1/me/playlists?limit=50");
 	print_r($playlists);
 
+	$playlist_tracks = [];
+	get_playlist_tracks_all($api, $playlists["Instrumental"]);
+	print_r($playlist_tracks);
 } else {
 	$options = [
 		'scope' => [
@@ -62,6 +65,32 @@ function get_tracks_all($api, $url) {
 	} while ($url = $next);
 }
 
+function get_playlist_tracks_all($api, $url) {
+	function get_playlist_tracks($api, $url) {
+		global $playlist_tracks;
+		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
+		$result = $api->lastResponse['body'];
+		$json_result = json_decode(json_encode($result), true);
+
+		$items = $json_result["items"];
+		foreach ($items as $item) {
+			$artists = implode(", ", array_column($item["track"]["artists"], "name"));
+			$track = $item["track"]["name"];
+			$playlist_tracks[] = $item["track"]["id"];
+		}
+
+		$next = $result->next;
+		if ($next) {
+			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
+			return $next;
+		}
+	}
+
+	do {
+		$next = get_playlist_tracks($api, $url);
+	} while ($url = $next);
+}
+
 function get_playlists_all($api, $url) {
 	function get_playlists($api, $url) {
 		$PREFIX = "tag:";
@@ -74,7 +103,7 @@ function get_playlists_all($api, $url) {
 		foreach ($items as $item) {
 			$name = $item["name"];
 			if (stripos($name, $PREFIX) === 0)
-				$playlists[substr($name, strlen($PREFIX))] = $item["id"];
+				$playlists[substr($name, strlen($PREFIX))] = parse_url($item["tracks"]["href"], PHP_URL_PATH);
 		}
 
 		$next = $result->next;
