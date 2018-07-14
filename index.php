@@ -11,17 +11,33 @@ require 'secrets.php';
 $session = new SpotifyWebAPI\Session(
 	$CLIENT_ID,
 	$CLIENT_SECRET,
-	'https://tagify.media/'
+	'https://tagify.media/callback.php'
 );
+
+$scopes = [
+	'user-library-read',
+	'playlist-read-private',
+	'playlist-modify-public',
+	'playlist-modify-private'
+];
+$authorizeUrl = $session->getAuthorizeUrl(["scope" => $scopes]);
 
 $api = new SpotifyWebAPI\SpotifyWebAPI();
 
-if (isset($_GET['code'])) {
+session_start();
+
+if (!isset($_SESSION["token"])) {
+	header('Location: ' . $authorizeUrl);
+	die();
+} else {
+	run_tagger($session, $api, $_SESSION["token"]);
+}
+
+function run_tagger($session, $api, $token) {
 	$TAG_PREFIX = "tag:";
 	$UNTAGGED = "tags:Untagged";
 
-	$session->requestAccessToken($_GET['code']);
-	$api->setAccessToken($session->getAccessToken());
+	$api->setAccessToken($token);
 
 	$library = get_tracks_all($api);
 	echo "<p>Library contains ", count($library), " saved songs.</p>\n";
@@ -48,19 +64,6 @@ if (isset($_GET['code'])) {
 
 	$untagged_count = fill_untagged_playlist($api, $library, $playlists, $all_tagged_tracks, $untagged_playlist[$UNTAGGED]);
 	echo "<p>Placed ", $untagged_count, " untagged tracks in the '", $UNTAGGED, "' playlist.</p>\n";
-
-} else {
-	$options = [
-		'scope' => [
-			'user-library-read',
-			'playlist-read-private',
-			'playlist-modify-public',
-			'playlist-modify-private'
-		],
-	];
-
-	header('Location: ' . $session->getAuthorizeUrl($options));
-	die();
 }
 
 function print_playlists($playlists) {
