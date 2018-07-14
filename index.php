@@ -128,7 +128,7 @@ function fill_untagged_playlist($api, $all_tagged) {
 	// first empty the Untagged playlist
 	$api->lastResponse = $api->request->api("PUT", $url . "?uris=", [], $api->authHeaders());
 	$result = $api->lastResponse['body'];
-	print_r($result);
+//	print_r($result);
 
 	// then put in the new tracks 50 at a time
 	$tracks = array_keys($all_tagged);
@@ -140,8 +140,8 @@ function fill_untagged_playlist($api, $all_tagged) {
 //		echo $assembled_url;
 		$api->lastResponse = $api->request->api("POST", $assembled_url, [], $api->authHeaders());
 		$result = $api->lastResponse['body'];
-		print_r($result);
 	}
+	echo "That leaves ", count($untagged), " untagged tracks in the ", $url, " playlist.", "\n";
 }
 
 function library_minus_tagged($library, $tagged) {
