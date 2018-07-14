@@ -15,7 +15,7 @@ if (isset($_GET['code'])) {
 	$api->setAccessToken($session->getAccessToken());
 	$library = [];
 	get_tracks_all($api, "/v1/me/tracks?limit=50");
-	print_r($library);
+	echo "Library contains ", count($library), " saved songs.", "\n";
 
 	$playlists = [];
 	get_playlists_all($api, "/v1/me/playlists?limit=50");
@@ -24,7 +24,7 @@ if (isset($_GET['code'])) {
 	$all_tagged_tracks = [];
 	foreach ($playlists as $playlist)
 		get_playlist_tracks_all($api, $playlist);
-	print_r($all_tagged_tracks);
+	echo "Found ", count($all_tagged_tracks), " tracks in 'tag:' playlists.", "\n";
 
 	fill_untagged_playlist($api, $all_tagged_tracks);
 } else {
@@ -53,7 +53,7 @@ function get_tracks_all($api, $url) {
 			$artists = implode(", ", array_column($item["track"]["artists"], "name"));
 			$track = $item["track"]["name"];
 			$library[] = $item["track"]["id"];
-			echo $artists, " - ", $track, "\n";
+//			echo $artists, " - ", $track, "\n";
 		}
 
 		$next = $result->next;
@@ -122,13 +122,30 @@ function get_playlists_all($api, $url) {
 }
 
 function fill_untagged_playlist($api, $all_tagged) {
-	$url = "/v1/users/ptable/playlists/1TLrv4HVyGVHmHkU6QwhQn/tracks"; //get this by name if not exist create
-	$tracks = array_keys($all_tagged);
-	$tracks = preg_filter('/^/', 'spotify:track:', $tracks);
-	$url = $url . "?uris=" . implode(",", $tracks);
-	$api->lastResponse = $api->request->api("POST", $url, [], $api->authHeaders());
+	global $library;
+	$url = "/v1/users/lucent/playlists/2uxiuHQ3eDtPYExfP2lXCM/tracks"; //get this by name if not exist create
+
+	// first empty the Untagged playlist
+	$api->lastResponse = $api->request->api("PUT", $url . "?uris=", [], $api->authHeaders());
 	$result = $api->lastResponse['body'];
 	print_r($result);
+
+	// then put in the new tracks 50 at a time
+	$tracks = array_keys($all_tagged);
+	$untagged = library_minus_tagged($library, $tracks);
+	$untagged = preg_filter('/^/', 'spotify:track:', $untagged);
+	$chunked_tracks = array_chunk($untagged, 50, true);
+	foreach ($chunked_tracks as $chunk) {
+		$assembled_url = $url . "?uris=" . implode(",", $chunk);
+//		echo $assembled_url;
+		$api->lastResponse = $api->request->api("POST", $assembled_url, [], $api->authHeaders());
+		$result = $api->lastResponse['body'];
+		print_r($result);
+	}
+}
+
+function library_minus_tagged($library, $tagged) {
+	return array_diff($library, $tagged);
 }
 
 ?></pre>
