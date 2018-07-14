@@ -1,4 +1,10 @@
-<pre><?php
+<html>
+ <head>
+  <title>Use Playlists as Tags on Spotify</title>
+ </head>
+ <body>
+  <h1>Use Playlists as Tags on Spotify</h1>
+<?php
 require 'vendor/autoload.php';
 require 'secrets.php';
 
@@ -11,22 +17,33 @@ $session = new SpotifyWebAPI\Session(
 $api = new SpotifyWebAPI\SpotifyWebAPI();
 
 if (isset($_GET['code'])) {
+	$TAG_PREFIX = "tag:";
+	$UNTAGGED = "tags:Untagged";
+
 	$session->requestAccessToken($_GET['code']);
 	$api->setAccessToken($session->getAccessToken());
-	$library = [];
-	get_tracks_all($api, "/v1/me/tracks?limit=50");
-	echo "Library contains ", count($library), " saved songs.", "\n";
 
-	$playlists = [];
-	get_playlists_all($api, "/v1/me/playlists?limit=50");
+	$library = get_tracks_all($api);
+	echo "<p>Library contains ", count($library), " saved songs.</p>\n";
+
+	$playlists = get_playlists_all($api, $TAG_PREFIX);
+	echo "<p>Of your playlists, ", count($playlists), " are prefixed with '", $TAG_PREFIX, "' and used as tags.</p>\n";
 	print_r($playlists);
 
 	$all_tagged_tracks = [];
-	foreach ($playlists as $playlist)
-		get_playlist_tracks_all($api, $playlist);
-	echo "Found ", count($all_tagged_tracks), " tracks in 'tag:' playlists.", "\n";
+	foreach ($playlists as $playlist) {
+		$playlist_tagged_tracks = get_playlist_tracks_all($api, $playlist);
+		$all_tagged_tracks = array_merge($all_tagged_tracks, $playlist_tagged_tracks);
+	}
+	echo "<p>Found ", count($all_tagged_tracks), " tracks in '", $TAG_PREFIX, "' playlists.</p>\n";
 
-	fill_untagged_playlist($api, $all_tagged_tracks);
+	$untagged_playlist = get_playlists_all($api, $UNTAGGED);
+	if (count($untagged_playlist) === 0)
+		$untagged_playlist[$UNTAGGED] = create_untagged_playlist($api, $UNTAGGED);
+
+	$untagged_count = fill_untagged_playlist($api, $library, $playlists, $all_tagged_tracks, $untagged_playlist[$UNTAGGED]);
+	echo "<p>Placed ", $untagged_count, " untagged tracks in the '", $UNTAGGED, "' playlist.</p>\n";
+
 } else {
 	$options = [
 		'scope' => [
@@ -41,9 +58,10 @@ if (isset($_GET['code'])) {
 	die();
 }
 
-function get_tracks_all($api, $url) {
-	function get_tracks($api, $url) {
-		global $library;
+function get_tracks_all($api) {
+	$url = "/v1/me/tracks?limit=50";
+	$library = [];
+	$get_tracks = function($api, $url) use (&$library) {
 		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
 		$result = $api->lastResponse['body'];
 		$json_result = json_decode(json_encode($result), true);
@@ -61,52 +79,27 @@ function get_tracks_all($api, $url) {
 			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
 			return $next;
 		}
-	}
+	};
 
 	do {
-		$next = get_tracks($api, $url);
+		$next = $get_tracks($api, $url);
 	} while ($url = $next);
-}
 
-function get_playlist_tracks($api, $url) {
-	global $all_tagged_tracks;
-	$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
-	$result = $api->lastResponse['body'];
-	$json_result = json_decode(json_encode($result), true);
-
-	$items = $json_result["items"];
-	foreach ($items as $item) {
-		$artists = implode(", ", array_column($item["track"]["artists"], "name"));
-		$track = $item["track"]["name"];
-		$all_tagged_tracks[$item["track"]["id"]] = 1;
-	}
-
-	$next = $result->next;
-	if ($next) {
-		$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
-		return $next;
-	}
+	return $library;
 }
 
 function get_playlist_tracks_all($api, $url) {
-	do {
-		$next = get_playlist_tracks($api, $url);
-	} while ($url = $next);
-}
-
-function get_playlists_all($api, $url) {
-	function get_playlists($api, $url) {
-		$PREFIX = "tag:";
-		global $playlists;
+	$all_tagged_tracks = [];
+	$get_playlist_tracks = function($api, $url) use (&$all_tagged_tracks) {
 		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
 		$result = $api->lastResponse['body'];
 		$json_result = json_decode(json_encode($result), true);
 
 		$items = $json_result["items"];
 		foreach ($items as $item) {
-			$name = $item["name"];
-			if (stripos($name, $PREFIX) === 0)
-				$playlists[substr($name, strlen($PREFIX))] = parse_url($item["tracks"]["href"], PHP_URL_PATH);
+			$artists = implode(", ", array_column($item["track"]["artists"], "name"));
+			$track = $item["track"]["name"];
+			$all_tagged_tracks[$item["track"]["id"]][] = $item["track"]["name"];
 		}
 
 		$next = $result->next;
@@ -114,21 +107,63 @@ function get_playlists_all($api, $url) {
 			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
 			return $next;
 		}
-	}
+	};
 
 	do {
-		$next = get_playlists($api, $url);
+		$next = $get_playlist_tracks($api, $url);
 	} while ($url = $next);
+
+	return $all_tagged_tracks;
 }
 
-function fill_untagged_playlist($api, $all_tagged) {
-	global $library;
-	$url = "/v1/users/lucent/playlists/2uxiuHQ3eDtPYExfP2lXCM/tracks"; //get this by name if not exist create
+function get_playlists_all($api, $pattern) {
+	$url = "/v1/me/playlists?limit=50";
+	$playlists = [];
+	$get_playlists = function($api, $url) use (&$playlists, $pattern) {
+		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
+		$result = $api->lastResponse['body'];
+		$json_result = json_decode(json_encode($result), true);
+
+		$items = $json_result["items"];
+		foreach ($items as $item) {
+			$name = $item["name"];
+			if (stripos($name, $pattern) === 0)
+				$playlists[$name] = parse_url($item["tracks"]["href"], PHP_URL_PATH);
+		}
+
+		$next = $result->next;
+		if ($next) {
+			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
+			return $next;
+		}
+	};
+
+	do {
+		$next = $get_playlists($api, $url);
+	} while ($url = $next);
+
+	return $playlists;
+}
+
+function create_untagged_playlist($api, $name) {
+	$url = "/v1/me";
+	$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
+	$result = $api->lastResponse['body'];
+	$user_id = $result->id;
+
+	$url = "/v1/users/" . $user_id . "/playlists";
+	$api->lastResponse = $api->request->api("POST", $url, json_encode(["name" => $name]), $api->authHeaders());
+	$result = $api->lastResponse['body'];
+	$playlist_url = $result->href;
+	return parse_url($playlist_url, PHP_URL_PATH) . "/tracks";
+}
+
+function fill_untagged_playlist($api, $library, $playlists, $all_tagged, $untagged_playlist) {
+	$url = $untagged_playlist;
 
 	// first empty the Untagged playlist
 	$api->lastResponse = $api->request->api("PUT", $url . "?uris=", [], $api->authHeaders());
 	$result = $api->lastResponse['body'];
-//	print_r($result);
 
 	// then put in the new tracks 50 at a time
 	$tracks = array_keys($all_tagged);
@@ -137,15 +172,16 @@ function fill_untagged_playlist($api, $all_tagged) {
 	$chunked_tracks = array_chunk($untagged, 50, true);
 	foreach ($chunked_tracks as $chunk) {
 		$assembled_url = $url . "?uris=" . implode(",", $chunk);
-//		echo $assembled_url;
 		$api->lastResponse = $api->request->api("POST", $assembled_url, [], $api->authHeaders());
 		$result = $api->lastResponse['body'];
 	}
-	echo "That leaves ", count($untagged), " untagged tracks in the ", $url, " playlist.", "\n";
+	return count($untagged);
 }
 
 function library_minus_tagged($library, $tagged) {
 	return array_diff($library, $tagged);
 }
 
-?></pre>
+?>
+ </body>
+</html>
