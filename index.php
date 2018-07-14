@@ -21,9 +21,12 @@ if (isset($_GET['code'])) {
 	get_playlists_all($api, "/v1/me/playlists?limit=50");
 	print_r($playlists);
 
-	$playlist_tracks = [];
-	get_playlist_tracks_all($api, $playlists["Instrumental"]);
-	print_r($playlist_tracks);
+	$all_tagged_tracks = [];
+	foreach ($playlists as $playlist)
+		get_playlist_tracks_all($api, $playlist);
+	print_r($all_tagged_tracks);
+
+	fill_untagged_playlist($api, $all_tagged_tracks);
 } else {
 	$options = [
 		'scope' => [
@@ -65,27 +68,27 @@ function get_tracks_all($api, $url) {
 	} while ($url = $next);
 }
 
-function get_playlist_tracks_all($api, $url) {
-	function get_playlist_tracks($api, $url) {
-		global $playlist_tracks;
-		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
-		$result = $api->lastResponse['body'];
-		$json_result = json_decode(json_encode($result), true);
+function get_playlist_tracks($api, $url) {
+	global $all_tagged_tracks;
+	$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
+	$result = $api->lastResponse['body'];
+	$json_result = json_decode(json_encode($result), true);
 
-		$items = $json_result["items"];
-		foreach ($items as $item) {
-			$artists = implode(", ", array_column($item["track"]["artists"], "name"));
-			$track = $item["track"]["name"];
-			$playlist_tracks[] = $item["track"]["id"];
-		}
-
-		$next = $result->next;
-		if ($next) {
-			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
-			return $next;
-		}
+	$items = $json_result["items"];
+	foreach ($items as $item) {
+		$artists = implode(", ", array_column($item["track"]["artists"], "name"));
+		$track = $item["track"]["name"];
+		$all_tagged_tracks[$item["track"]["id"]] = 1;
 	}
 
+	$next = $result->next;
+	if ($next) {
+		$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
+		return $next;
+	}
+}
+
+function get_playlist_tracks_all($api, $url) {
 	do {
 		$next = get_playlist_tracks($api, $url);
 	} while ($url = $next);
@@ -116,6 +119,16 @@ function get_playlists_all($api, $url) {
 	do {
 		$next = get_playlists($api, $url);
 	} while ($url = $next);
+}
+
+function fill_untagged_playlist($api, $all_tagged) {
+	$url = "/v1/users/ptable/playlists/1TLrv4HVyGVHmHkU6QwhQn/tracks"; //get this by name if not exist create
+	$tracks = array_keys($all_tagged);
+	$tracks = preg_filter('/^/', 'spotify:track:', $tracks);
+	$url = $url . "?uris=" . implode(",", $tracks);
+	$api->lastResponse = $api->request->api("POST", $url, [], $api->authHeaders());
+	$result = $api->lastResponse['body'];
+	print_r($result);
 }
 
 ?></pre>
