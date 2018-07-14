@@ -11,7 +11,7 @@ require 'secrets.php';
 $session = new SpotifyWebAPI\Session(
 	$CLIENT_ID,
 	$CLIENT_SECRET,
-	'https://dayah.com/spotify-tag/'
+	'https://tagify.media/'
 );
 
 $api = new SpotifyWebAPI\SpotifyWebAPI();
@@ -27,8 +27,13 @@ if (isset($_GET['code'])) {
 	echo "<p>Library contains ", count($library), " saved songs.</p>\n";
 
 	$playlists = get_playlists_all($api, $TAG_PREFIX);
-	echo "<p>Of your playlists, ", count($playlists), " are prefixed with '", $TAG_PREFIX, "' and used as tags.</p>\n";
-	print_r($playlists);
+	if (count($playlists) > 0) {
+		echo "<p>Of your playlists, ", count($playlists), " are prefixed with '", $TAG_PREFIX, "' and used as tags.</p>\n";
+		print_playlists($playlists);
+	} else {
+		echo "<p>Tag songs by placing them in playlists with names starting with '", $TAG_PREFIX, "' like '", $TAG_PREFIX, "dance' then run this tool again.<p>\n";
+		die();
+	}
 
 	$all_tagged_tracks = [];
 	foreach ($playlists as $playlist) {
@@ -56,6 +61,12 @@ if (isset($_GET['code'])) {
 
 	header('Location: ' . $session->getAuthorizeUrl($options));
 	die();
+}
+
+function print_playlists($playlists) {
+	foreach ($playlists as $name=>$playlist) {
+		echo "<div>", $name, "</div>\n";
+	}
 }
 
 function get_tracks_all($api) {
