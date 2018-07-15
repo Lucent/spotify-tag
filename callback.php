@@ -23,7 +23,7 @@ if (isset($_GET["code"])) {
     session_start();
     $_SESSION['token'] = $session->getAccessToken();
 
-    header("Location: /");
+    header("Location: /run.php");
 } else {
     header("Location: " . $session->getAuthorizeUrl(["scope" => $scopes]));
 }
