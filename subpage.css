@@ -5,45 +5,18 @@
 @import url('https://fonts.googleapis.com/css?family=Lato');
 
 /*** Header ***/
-body			{ color: white; background: linear-gradient(transparent, black), linear-gradient(90deg, rgb(192, 116, 178), rgb(138, 181, 232)); }
-body, input[type=email], textarea	{ background-color: rgb(245, 248, 250); }
+body			{ color: white; background-color: black; background: linear-gradient(transparent, black), linear-gradient(to right, rgb(192, 116, 178), rgb(138, 181, 232)); }
 h1				{ display: none; }
-h1, h2			{ font-family: 'Nunito', sans-serif; font-size: 4em; margin: auto; text-align: left; max-width: 45rem; letter-spacing: 0.2em; margin-top: 1em; }
+h1, h2, p, ul	{ max-width: 45rem; }
+h1, h2			{ font-family: 'Nunito', sans-serif; font-size: 4em; margin: auto; text-align: left; letter-spacing: 0.2em; margin-top: 1em; }
 h2				{ font-size: 3em; letter-spacing: -0.03em; }
 
-h3, p, figcaption, dt, dd, label, ul	{ font-family: 'Lato', sans-serif; }
-p, ul			{ margin: 2rem auto; max-width: 45rem; padding: 0 2rem; }
-figure			{ margin: 1rem auto; max-width: 45rem; padding: 1rem; }
-p, figcaption	{ line-height: 1.5; }
-dd				{ line-height: 1.3; }
-dd				{ text-align: justify; }
-
-h3				{ margin: 1rem 3rem 0; color: blue; font-size: x-large; }
-section			{ margin: 0 2rem; column-width: 17em; column-count: 3; column-gap: 1em; }
-
-section	{ border-left: thick solid #88F; padding-left: 1rem; margin-left: 2rem; }
-
-cite			{ margin: 0 4rem; font-family: monospace; padding-left: 5ex; text-indent: -5ex; display: block; font-style: normal; }
-
-fieldset, figure, header, section dl	{ background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-section dl	{ padding: 1em; margin: 0.5rem 0; display: inline-block; }
-section dt	{ color: #45C; font-size: 1.5em; border-bottom: 1px solid #DEF; padding-bottom: 0.5ex; margin-bottom: 0.5ex; }
-section dd	{ margin-left: 0; }
-
-p, label	{ font-size: x-large; }
-code		{ font-size: inherit; color: rgb(255, 255, 200); }
-ul			{ font-size: large; }
-figure		{ font-size: x-large; }
-figure img	{ max-width: 80%; }
-figcaption	{ font-size: large; line-height: 1.5; margin-top: 0.5em; }
-
-fieldset	{ min-width: 0; max-width: 30em; margin: 2rem auto; padding: 0 1rem; border: none; }
-legend		{ font-family: sans-serif; font-size: x-large; margin: 1rem 0; float: left; }
-input[type=email],
-textarea	{ font-size: large; font-family: sans-serif; display: block; width: 100%; padding: 0.5em; margin: 1rem 0; box-sizing: border-box; }
-button		{ color: white; font-size: 1em; font-weight: bold; border-radius: 3em; background-color: #1ed760; text-transform: uppercase; border: none; padding: 1em 2em; margin: auto; letter-spacing: 0.1em; }
-input,
-textarea	{ box-shadow: inset 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 2px rgba(0,0,0,0.24); border: none; }
+p, ul			{ font-family: 'Lato', sans-serif; margin: 2rem auto; padding: 0 1rem; }
+li				{ margin-left: 1rem; }
+p				{ line-height: 1.5; font-size: x-large; }
+code			{ font-size: inherit; color: rgb(255, 255, 200); }
+a				{ color: rgb(200, 200, 255); }
+button			{ color: white; font-size: 1em; font-weight: bold; border-radius: 3em; background-color: #1ed760; text-transform: uppercase; border: none; padding: 1em 2em; margin: auto; letter-spacing: 0.1em; }
 
 /*** Footer ***/
 footer, addr			{ font-family: sans-serif; }

@@ -5,7 +5,7 @@ require 'secrets.php';
 $session = new SpotifyWebAPI\Session(
 	$CLIENT_ID,
 	$CLIENT_SECRET,
-	'https://tagify.media/callback.php'
+	'https://tagify.me/callback.php'
 );
 
 $scopes = [

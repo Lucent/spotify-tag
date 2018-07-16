@@ -1,9 +1,12 @@
 <html>
  <head>
   <title>Use Playlists as Tags on Spotify</title>
+  <link rel="stylesheet" href="subpage.css">
+  <link href="https://fonts.googleapis.com/css?family=Nunito:700,900" rel="stylesheet">
  </head>
  <body>
-  <h1>Use Playlists as Tags on Spotify</h1>
+  <h1>tagify.me</h1>
+  <h2>Use Playlists as Tags on Spotify</h1>
 <?php
 require 'vendor/autoload.php';
 require 'secrets.php';
@@ -11,7 +14,7 @@ require 'secrets.php';
 $session = new SpotifyWebAPI\Session(
 	$CLIENT_ID,
 	$CLIENT_SECRET,
-	'https://tagify.media/callback.php'
+	'https://tagify.me/callback.php'
 );
 
 $scopes = [
@@ -42,14 +45,19 @@ function run_tagger($session, $api, $token) {
 	echo "<p>Loading songs from library.</p>\n";
 	echo "<progress></progress>\n";
 	$library = get_tracks_all($api);
-	echo "<p>Library contains ", count($library), " saved songs.</p>\n";
+	if (count($library) > 0) {
+		echo "<p>Library contains ", count($library), " saved songs.</p>\n";
+	} else {
+		echo "<p class='Error'>You have not saved any songs to your library. This tool creates a list of songs in your library which are not on any <code>tag:</code> playlists.</p>\n";
+		die();
+	}
 
 	$playlists = get_playlists_all($api, $PREFIX, $UNTAGGED);
 	if (count($playlists) > 0) {
-		echo "<p>Of your playlists, ", count($playlists), " are prefixed with <code>", $PREFIX, "</code> and used as tags.</p>\n";
+		echo "<p>", count($playlists), " of your playlists are prefixed with <code>", $PREFIX, "</code> and will be treated as tags.</p>\n";
 		print_playlists($playlists);
 	} else {
-		echo "<p>Tag songs by placing them in playlists with names starting with <code>", $PREFIX, "</code> like <code>", $PREFIX, "dance</code> then run this tool again.<p>\n";
+		echo "<p class='Error'>Tag songs by placing them in playlists starting with <code>", $PREFIX, "</code> like <code>", $PREFIX, "dance</code> then run this tool again.</p>\n";
 		die();
 	}
 
@@ -58,8 +66,13 @@ function run_tagger($session, $api, $token) {
 		$playlist_tagged_tracks = get_playlist_tracks_all($api, $playlist);
 		$all_tagged_tracks = array_merge_recursive($all_tagged_tracks, $playlist_tagged_tracks);
 	}
-	echo "<p>Found ", count($all_tagged_tracks), " tracks in '", $PREFIX, "' playlists.</p>\n";
-	display_tracks_in_multiple_playlists($all_tagged_tracks, $library);
+	if (count($all_tagged_tracks) > 0) {
+		echo "<p>Found ", count($all_tagged_tracks), " tracks in ", count($playlists), " <code>", $PREFIX, "</code> playlists.</p>\n";
+	} else {
+		echo "<p class='Error'>You created <code>tag:</code> playlists, but they did not contain any tracks. Add tracks to those playlists and run this tool again.</p>\n";
+		die();
+	}
+	display_tracks_in_multiple_playlists($all_tagged_tracks, $library, $playlists);
 
 	$untagged_playlist = get_playlists_all($api, $PREFIX . $UNTAGGED);
 	if (count($untagged_playlist) === 0) {
@@ -68,13 +81,15 @@ function run_tagger($session, $api, $token) {
 	}
 
 	$untagged_count = fill_untagged_playlist($api, $library, $playlists, $all_tagged_tracks, $untagged_playlist[$PREFIX . $UNTAGGED]);
-	echo "<p>Placed ", $untagged_count, " untagged tracks in the '", $PREFIX . $UNTAGGED, "' playlist.</p>\n";
+	echo "<p>Placed ", $untagged_count, " untagged tracks in the <code>", $PREFIX . $UNTAGGED, "</code> playlist.</p>\n";
 }
 
 function print_playlists($playlists) {
+	echo "<ul>\n";
 	foreach ($playlists as $name=>$playlist) {
-		echo "<div>", $name, "</div>\n";
+		echo "<li><code>", $name, "</code></li>\n";
 	}
+	echo "</ul>\n";
 }
 
 function get_tracks_all($api) {
@@ -91,6 +106,7 @@ function get_tracks_all($api) {
 			$library[$track["id"]] = [
 				"artists" => implode(", ", array_column($track["artists"], "name")),
 				"title" => $track["name"],
+				"available" => $track["preview_url"],
 				"url" => $track["external_urls"]["spotify"]
 			];
 		}
@@ -203,20 +219,30 @@ function library_minus_tagged($library, $tagged) {
 	return array_diff(array_keys($library), array_keys($tagged));
 }
 
-function display_tracks_in_multiple_playlists($tracks, $library) {
+function display_tracks_in_multiple_playlists($tracks, $library, $all_playlists) {
 	echo "<ul>\n";
 	foreach ($tracks as $id=>$playlists) {
 		if (!array_key_exists($id, $library))
-			echo '<li>', $id, ' is on ', implode(", ", $playlists), ' playlist(s) but not in your library.</li>', "\n";
+			echo '<li>', $id, ' is on ', implode(", ", lookup_playlists($playlists, $all_playlists)), ' playlist(s) but not in your library.</li>', "\n";
+		elseif (!$library[$id]["available"])
+			echo "<li>", $library[$id]["title"], " is in your library but not available.</li>\n";
 
 		if (count($playlists) > 1) {
 			$track = $library[$id];
 			echo '<li><a href="', $track["url"], '">', $track["artists"], " - ", $track["title"], "</a> is in multiple playlists: ";
-			echo implode(", ", $playlists);
+			echo implode(", ", lookup_playlists($playlists, $all_playlists));
 			echo "</li>\n";
 		}
 	}
 	echo "</ul>\n";
+}
+
+function lookup_playlists($lists, $all_playlists) {
+	$formatted = [];
+	foreach ($lists as $playlist) {
+		$formatted[] = "<code>" . array_search($playlist, $all_playlists) . "</code>";
+	}
+	return $formatted;
 }
 
 ?>
