@@ -9,7 +9,7 @@
   <h1>tagify.media</h1>
   <h2>Use Playlists as Tags on Spotify</h2>
 
-  <p>Have you tried to categorize your music using playlists only to realize you can't see which songs in your library aren't yet categorized? Organizing your music can be daunting if there's no way of knowing when you're done.</p>
+  <p>Have you tried to categorize your music in your library using playlists only to find you can't see which songs aren't yet categorized? Organizing your music can be daunting if there's no way of knowing when you're done.</p>
   <p>With Tagify, your existing playlists will stay untouched, but a new playlist is created containing any music in your library which isn't also on a playlist with the prefix <code>tag:</code></p>
   <p>Simply populate these new <code>tag:indie</code>, <code>tag:electronic</code>, or <code>tag:whatever you want</code> playlists you create with songs, and watch them disappear from a new <code>tag:untagged</code> playlist this tool creates which is simply your saved library minus your tagged songs.</p>
 

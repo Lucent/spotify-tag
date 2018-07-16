@@ -62,8 +62,10 @@ function run_tagger($session, $api, $token) {
 	display_tracks_in_multiple_playlists($all_tagged_tracks, $library);
 
 	$untagged_playlist = get_playlists_all($api, $PREFIX . $UNTAGGED);
-	if (count($untagged_playlist) === 0)
+	if (count($untagged_playlist) === 0) {
+		echo "<p>Couldn't find a playlist with the name <code>", $PREFIX . $UNTAGGED, "</code> so it is being created.</p>\n";
 		$untagged_playlist[$PREFIX . $UNTAGGED] = create_untagged_playlist($api, $PREFIX . $UNTAGGED);
+	}
 
 	$untagged_count = fill_untagged_playlist($api, $library, $playlists, $all_tagged_tracks, $untagged_playlist[$PREFIX . $UNTAGGED]);
 	echo "<p>Placed ", $untagged_count, " untagged tracks in the '", $PREFIX . $UNTAGGED, "' playlist.</p>\n";
@@ -178,6 +180,7 @@ function create_untagged_playlist($api, $name) {
 }
 
 function fill_untagged_playlist($api, $library, $playlists, $all_tagged, $untagged_playlist) {
+	$CHUNK_SIZE = 50; // they claim max 100, but that should be done in the request body
 	$url = $untagged_playlist;
 
 	// first empty the Untagged playlist
@@ -185,10 +188,9 @@ function fill_untagged_playlist($api, $library, $playlists, $all_tagged, $untagg
 	$result = $api->lastResponse['body'];
 
 	// then put in the new tracks 50 at a time
-	$tracks = array_keys($all_tagged);
-	$untagged = library_minus_tagged($library, $tracks);
+	$untagged = library_minus_tagged($library, $all_tagged);
 	$untagged = preg_filter('/^/', 'spotify:track:', $untagged);
-	$chunked_tracks = array_chunk($untagged, 50, true);
+	$chunked_tracks = array_chunk($untagged, $CHUNK_SIZE, true);
 	foreach ($chunked_tracks as $chunk) {
 		$assembled_url = $url . "?uris=" . implode(",", $chunk);
 		$api->lastResponse = $api->request->api("POST", $assembled_url, [], $api->authHeaders());
@@ -198,21 +200,23 @@ function fill_untagged_playlist($api, $library, $playlists, $all_tagged, $untagg
 }
 
 function library_minus_tagged($library, $tagged) {
-	return array_diff($library, $tagged);
+	return array_diff(array_keys($library), array_keys($tagged));
 }
 
 function display_tracks_in_multiple_playlists($tracks, $library) {
+	echo "<ul>\n";
 	foreach ($tracks as $id=>$playlists) {
 		if (!array_key_exists($id, $library))
-			echo '<div>', $id, ' is on ', implode(", ", $playlists), ' playlist(s) but not in your library.</div>', "\n";
+			echo '<li>', $id, ' is on ', implode(", ", $playlists), ' playlist(s) but not in your library.</li>', "\n";
 
 		if (count($playlists) > 1) {
 			$track = $library[$id];
-			echo '<div><a href="', $track["url"], '">', $track["artists"], " - ", $track["title"], "</a> is in multiple playlists: ";
+			echo '<li><a href="', $track["url"], '">', $track["artists"], " - ", $track["title"], "</a> is in multiple playlists: ";
 			echo implode(", ", $playlists);
-			echo "</div>\n";
+			echo "</li>\n";
 		}
 	}
+	echo "</ul>\n";
 }
 
 ?>
