@@ -1,4 +1,5 @@
 <?php
+
 require 'vendor/autoload.php';
 require 'secrets.php';
 
@@ -16,6 +17,8 @@ $scopes = [
 ];
 
 $api = new SpotifyWebAPI\SpotifyWebAPI();
+
+header('Cache-Control: no-cache');
 
 if (isset($_GET["code"])) {
     $session->requestAccessToken($_GET["code"]);

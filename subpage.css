@@ -7,12 +7,12 @@
 /*** Header ***/
 body			{ color: white; background-color: black; background: linear-gradient(transparent, black), linear-gradient(to right, rgb(192, 116, 178), rgb(138, 181, 232)); }
 h1				{ display: none; }
-h1, h2, p, ul	{ max-width: 45rem; }
-h1, h2			{ font-family: 'Nunito', sans-serif; font-size: 4em; margin: auto; text-align: left; letter-spacing: 0.2em; margin-top: 1em; }
+h1, h2, h3, p, ul	{ max-width: 45rem; }
+progress		{ width: 100%; }
+h1, h2	 		{ font-family: 'Nunito', sans-serif; font-size: 4em; margin: auto; text-align: left; letter-spacing: 0.2em; margin-top: 1em; }
 h2				{ font-size: 3em; letter-spacing: -0.03em; }
-
-p, ul			{ font-family: 'Lato', sans-serif; margin: 2rem auto; padding: 0 1rem; }
-li				{ margin-left: 1rem; }
+h3, p, ul		{ font-family: 'Lato', sans-serif; margin: 2rem auto; padding: 0 1rem; }
+li				{ margin-left: 2rem; }
 p				{ line-height: 1.5; font-size: x-large; }
 code			{ font-size: inherit; color: rgb(255, 255, 200); }
 a				{ color: rgb(200, 200, 255); }

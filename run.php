@@ -1,3 +1,7 @@
+<?php
+header('Cache-Control: no-cache');
+header('Content-type: text/html; charset=utf-8');
+?>
 <html>
  <head>
   <title>Use Playlists as Tags on Spotify</title>
@@ -43,7 +47,8 @@ function run_tagger($session, $api, $token) {
 	$api->setAccessToken($token);
 
 	echo "<p>Loading songs from library.</p>\n";
-	echo "<progress></progress>\n";
+	echo "<p><progress id='Library'></progress></p>\n";
+	flush_output();
 	$library = get_tracks_all($api);
 	if (count($library) > 0) {
 		echo "<p>Library contains ", count($library), " saved songs.</p>\n";
@@ -52,6 +57,7 @@ function run_tagger($session, $api, $token) {
 		die();
 	}
 
+	flush_output();
 	$playlists = get_playlists_all($api, $PREFIX, $UNTAGGED);
 	if (count($playlists) > 0) {
 		echo "<p>", count($playlists), " of your playlists are prefixed with <code>", $PREFIX, "</code> and will be treated as tags.</p>\n";
@@ -74,12 +80,14 @@ function run_tagger($session, $api, $token) {
 	}
 	display_tracks_in_multiple_playlists($all_tagged_tracks, $library, $playlists);
 
+	flush_output();
 	$untagged_playlist = get_playlists_all($api, $PREFIX . $UNTAGGED);
 	if (count($untagged_playlist) === 0) {
 		echo "<p>Couldn't find a playlist with the name <code>", $PREFIX . $UNTAGGED, "</code> so it is being created.</p>\n";
 		$untagged_playlist[$PREFIX . $UNTAGGED] = create_untagged_playlist($api, $PREFIX . $UNTAGGED);
 	}
 
+	flush_output();
 	$untagged_count = fill_untagged_playlist($api, $library, $playlists, $all_tagged_tracks, $untagged_playlist[$PREFIX . $UNTAGGED]);
 	echo "<p>Placed ", $untagged_count, " untagged tracks in the <code>", $PREFIX . $UNTAGGED, "</code> playlist.</p>\n";
 }
@@ -114,8 +122,10 @@ function get_tracks_all($api) {
 		$next = $result->next;
 		if ($next) {
 			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
+			set_progress("Library", $result->offset / $result->total);
 			return $next;
-		}
+		} else
+			set_progress("Library", 1);
 	};
 
 	do {
@@ -123,6 +133,17 @@ function get_tracks_all($api) {
 	} while ($url = $next);
 
 	return $library;
+}
+
+function set_progress($id, $value) {
+	echo "<script>document.getElementById('", $id, "').value = ", $value, ";</script>\n";
+	flush_output();
+}
+
+function flush_output() {
+	$junk = "<!-- long string to flush output buffer -->";
+	echo str_repeat($junk, 4096 / strlen($junk)), "\n";
+	ob_end_flush(); flush();
 }
 
 function get_playlist_tracks_all($api, $url) {
@@ -219,22 +240,33 @@ function library_minus_tagged($library, $tagged) {
 	return array_diff(array_keys($library), array_keys($tagged));
 }
 
+function get_artist_title($track) {
+	return "<a href='{$track["url"]}'>" . $track["artists"] . " - " . $track["title"] . "</a>";
+}
+
 function display_tracks_in_multiple_playlists($tracks, $library, $all_playlists) {
-	echo "<ul>\n";
+	$unavailable = [];
+	$notinlibrary = [];
+	$multiple = [];
 	foreach ($tracks as $id=>$playlists) {
 		if (!array_key_exists($id, $library))
-			echo '<li>', $id, ' is on ', implode(", ", lookup_playlists($playlists, $all_playlists)), ' playlist(s) but not in your library.</li>', "\n";
+			$notinlibrary[] = "<li>" . $id . " is on " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
 		elseif (!$library[$id]["available"])
-			echo "<li>", $library[$id]["title"], " is in your library but not available.</li>\n";
+			$unavailable[] = "<li>" . get_artist_title($library[$id]) . "</li>\n";
 
 		if (count($playlists) > 1) {
-			$track = $library[$id];
-			echo '<li><a href="', $track["url"], '">', $track["artists"], " - ", $track["title"], "</a> is in multiple playlists: ";
-			echo implode(", ", lookup_playlists($playlists, $all_playlists));
-			echo "</li>\n";
+			$multiple[] = "<li>" . get_artist_title($library[$id]) . " in " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
 		}
 	}
-	echo "</ul>\n";
+
+	echo "<h3>Songs in multiple playlists</h3>\n";
+	echo "<ul>\n" , implode("", $multiple), "</ul>\n";
+
+	echo "<h3>Unavailable songs saved to your library</h3>\n";
+	echo "<ul>\n" , implode("", $unavailable), "</ul>\n";
+
+	echo "<h3>Songs on playlists but not saved to your library</h3>\n";
+	echo "<ul>\n" , implode("", $notinlibrary), "</ul>\n";
 }
 
 function lookup_playlists($lists, $all_playlists) {
