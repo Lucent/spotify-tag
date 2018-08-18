@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "jwilsson/spotify-web-api-php",
-            "version": "2.5.0",
+            "version": "2.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jwilsson/spotify-web-api-php.git",
-                "reference": "1153e83f9f6678a1f15726749eee6c0750be9085"
+                "reference": "0d6c738f8ab0f7faae489a579dbb63d13c20f48e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jwilsson/spotify-web-api-php/zipball/1153e83f9f6678a1f15726749eee6c0750be9085",
-                "reference": "1153e83f9f6678a1f15726749eee6c0750be9085",
+                "url": "https://api.github.com/repos/jwilsson/spotify-web-api-php/zipball/0d6c738f8ab0f7faae489a579dbb63d13c20f48e",
+                "reference": "0d6c738f8ab0f7faae489a579dbb63d13c20f48e",
                 "shasum": ""
             },
             "require": {
@@ -50,7 +50,7 @@
             "keywords": [
                 "spotify"
             ],
-            "time": "2018-07-03T18:40:38+00:00"
+            "time": "2018-07-18T14:48:12+00:00"
         }
     ],
     "packages-dev": [],
