@@ -262,8 +262,8 @@ function display_tracks_in_multiple_playlists($tracks, $library, $all_playlists)
 	echo "<h3>Songs in multiple playlists</h3>\n";
 	echo "<ul>\n" , implode("", $multiple), "</ul>\n";
 
-	echo "<h3>Unavailable songs saved to your library</h3>\n";
-	echo "<ul>\n" , implode("", $unavailable), "</ul>\n";
+//	echo "<h3>Unavailable songs saved to your library</h3>\n";
+//	echo "<ul>\n" , implode("", $unavailable), "</ul>\n";
 
 	echo "<h3>Songs on playlists but not saved to your library</h3>\n";
 	echo "<ul>\n" , implode("", $notinlibrary), "</ul>\n";
