@@ -1,32 +1,32 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "baa583c583d6cd310d2018a9f905b3e4",
+    "content-hash": "cf42504353114c5bae8fd92975a6e8ac",
     "packages": [
         {
             "name": "jwilsson/spotify-web-api-php",
-            "version": "2.5.1",
+            "version": "5.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jwilsson/spotify-web-api-php.git",
-                "reference": "0d6c738f8ab0f7faae489a579dbb63d13c20f48e"
+                "reference": "4ec7242fbaaf2df382d1545f169e8ef8ad7b2006"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jwilsson/spotify-web-api-php/zipball/0d6c738f8ab0f7faae489a579dbb63d13c20f48e",
-                "reference": "0d6c738f8ab0f7faae489a579dbb63d13c20f48e",
+                "url": "https://api.github.com/repos/jwilsson/spotify-web-api-php/zipball/4ec7242fbaaf2df382d1545f169e8ef8ad7b2006",
+                "reference": "4ec7242fbaaf2df382d1545f169e8ef8ad7b2006",
                 "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
-                "php": "^5.6 || ^7.0"
+                "php": "^7.3 || ^8.0"
             },
             "require-dev": {
-                "php-coveralls/php-coveralls": "^2.0",
-                "phpunit/phpunit": "^5.7 || ^6.0",
+                "php-coveralls/php-coveralls": "^2.5",
+                "phpunit/phpunit": "^9.4",
                 "squizlabs/php_codesniffer": "^3.0"
             },
             "type": "library",
@@ -46,11 +46,15 @@
                 }
             ],
             "description": "A PHP wrapper for Spotify's Web API.",
-            "homepage": "http://jwilsson.github.io/spotify-web-api-php/",
+            "homepage": "https://github.com/jwilsson/spotify-web-api-php",
             "keywords": [
                 "spotify"
             ],
-            "time": "2018-07-18T14:48:12+00:00"
+            "support": {
+                "issues": "https://github.com/jwilsson/spotify-web-api-php/issues",
+                "source": "https://github.com/jwilsson/spotify-web-api-php/tree/5.0.3"
+            },
+            "time": "2022-01-15T12:55:35+00:00"
         }
     ],
     "packages-dev": [],
@@ -60,5 +64,6 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
-    "platform-dev": []
+    "platform-dev": [],
+    "plugin-api-version": "2.0.0"
 }

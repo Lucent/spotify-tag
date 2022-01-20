@@ -16,7 +16,7 @@ $scopes = [
 	'playlist-modify-private'
 ];
 
-$api = new SpotifyWebAPI\SpotifyWebAPI();
+$api = new SpotifyWebAPI\SpotifyWebAPI(["auto_refresh" => true]);
 
 header('Cache-Control: no-cache');
 

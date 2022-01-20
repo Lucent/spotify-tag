@@ -29,7 +29,7 @@ $scopes = [
 ];
 $authorizeUrl = $session->getAuthorizeUrl(["scope" => $scopes]);
 
-$api = new SpotifyWebAPI\SpotifyWebAPI();
+$api = new SpotifyWebAPI\SpotifyWebAPI(["auto_refresh" => true]);
 
 session_start();
 
@@ -37,28 +37,27 @@ if (!isset($_SESSION["token"])) {
 	header('Location: ' . $authorizeUrl);
 	die();
 } else {
-	run_tagger($session, $api, $_SESSION["token"]);
+	$api->setAccessToken($_SESSION["token"]);
+	run_tagger($api);
 }
 
-function run_tagger($session, $api, $token) {
+function run_tagger($api) {
 	$PREFIX = "tag:";
 	$UNTAGGED = "untagged";
-
-	$api->setAccessToken($token);
 
 	echo "<p>Loading songs from library.</p>\n";
 	echo "<p><progress id='Library'></progress></p>\n";
 	flush_output();
-	$library = get_tracks_all($api);
+	$library = get_saved_tracks($api);
 	if (count($library) > 0) {
 		echo "<p>Library contains ", count($library), " saved songs.</p>\n";
 	} else {
-		echo "<p class='Error'>You have not saved any songs to your library. This tool creates a list of songs in your library which are not on any <code>tag:</code> playlists.</p>\n";
+		echo "<p class='Error'>You have not saved any songs to your library. This tool creates a list of songs in your liked playlist which are not on any <code>tag:</code> playlists.</p>\n";
 		die();
 	}
 
 	flush_output();
-	$playlists = get_playlists_all($api, $PREFIX, $UNTAGGED);
+	$playlists = get_playlists($api, $PREFIX, $UNTAGGED);
 	if (count($playlists) > 0) {
 		echo "<p>", count($playlists), " of your playlists are prefixed with <code>", $PREFIX, "</code> and will be treated as tags.</p>\n";
 		print_playlists($playlists);
@@ -69,7 +68,7 @@ function run_tagger($session, $api, $token) {
 
 	$all_tagged_tracks = [];
 	foreach ($playlists as $playlist) {
-		$playlist_tagged_tracks = get_playlist_tracks_all($api, $playlist);
+		$playlist_tagged_tracks = get_playlist_tracks($api, $playlist);
 		$all_tagged_tracks = array_merge_recursive($all_tagged_tracks, $playlist_tagged_tracks);
 	}
 	if (count($all_tagged_tracks) > 0) {
@@ -81,14 +80,15 @@ function run_tagger($session, $api, $token) {
 	display_tracks_in_multiple_playlists($all_tagged_tracks, $library, $playlists);
 
 	flush_output();
-	$untagged_playlist = get_playlists_all($api, $PREFIX . $UNTAGGED);
+	$untagged_playlist = get_playlists($api, $PREFIX . $UNTAGGED);
 	if (count($untagged_playlist) === 0) {
 		echo "<p>Couldn't find a playlist with the name <code>", $PREFIX . $UNTAGGED, "</code> so it is being created.</p>\n";
-		$untagged_playlist[$PREFIX . $UNTAGGED] = create_untagged_playlist($api, $PREFIX . $UNTAGGED);
-	}
+		$untagged_playlist = $api->createPlaylist(["name" => $PREFIX . $UNTAGGED])->id;
+	} else
+		$untagged_playlist = current($untagged_playlist);
 
 	flush_output();
-	$untagged_count = fill_untagged_playlist($api, $library, $playlists, $all_tagged_tracks, $untagged_playlist[$PREFIX . $UNTAGGED]);
+	$untagged_count = populate_untagged_playlist($api, $library, $all_tagged_tracks, $untagged_playlist);
 	echo "<p>Placed ", $untagged_count, " untagged tracks in the <code>", $PREFIX . $UNTAGGED, "</code> playlist.</p>\n";
 }
 
@@ -100,39 +100,76 @@ function print_playlists($playlists) {
 	echo "</ul>\n";
 }
 
-function get_tracks_all($api) {
-	$url = "/v1/me/tracks?limit=50";
-	$library = [];
-	$get_tracks = function($api, $url) use (&$library) {
-		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
-		$result = $api->lastResponse['body'];
-		$json_result = json_decode(json_encode($result), true);
+function get_playlists($api, $pattern, $exclude = "MichaelDayah") {
+	$playlists = [];
 
-		$items = $json_result["items"];
+	$chunk = 50;
+	$offset = 0;
+	do {
+		$playlists_json = $api->getMyPlaylists(["offset" => $offset, "limit" => $chunk]);
+		$items = $playlists_json->items;
 		foreach ($items as $item) {
-			$track = $item["track"];
-			$library[$track["id"]] = [
-				"artists" => implode(", ", array_column($track["artists"], "name")),
-				"title" => $track["name"],
-				"available" => $track["preview_url"],
-				"url" => $track["external_urls"]["spotify"]
+			$name = $item->name;
+			if (stripos($name, $pattern) === 0 && $name !== $pattern . $exclude)
+				$playlists[$name] = $item->id;
+		}
+		$offset += $chunk;
+		$total = $playlists_json->total;
+	} while ($offset <= $total);
+
+	return $playlists;
+}
+
+function get_saved_tracks($api) {
+	$library = [];
+
+	$chunk = 50;
+	$offset = 0;
+	do {
+		try {
+			$saved_json = $api->getMySavedTracks(["offset" => $offset, "limit" => $chunk]);
+		} catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+			if ($e->hasExpiredToken())
+				print_r("Old access token.");
+			else
+				print_r($e);
+		}
+		$items = $saved_json->items;
+		foreach ($items as $item) {
+			$track = $item->track;
+			$library[$track->uri] = [
+				"artists" => implode(", ", array_column($track->artists, "name")),
+				"title" => $track->name,
+				"available" => count($track->available_markets),
+				"url" => $track->external_urls->spotify
 			];
 		}
-
-		$next = $result->next;
-		if ($next) {
-			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
-			set_progress("Library", $result->offset / $result->total);
-			return $next;
-		} else
-			set_progress("Library", 1);
-	};
-
-	do {
-		$next = $get_tracks($api, $url);
-	} while ($url = $next);
+		$offset += $chunk;
+		$total = $saved_json->total;
+	} while ($offset <= $total);
+	set_progress("Library", 1);
 
 	return $library;
+}
+
+function get_playlist_tracks($api, $playlist_id) {
+	$playlist_tracks = [];
+
+	$chunk = 50;
+	$offset = 0;
+	do {
+		$tracks_json = $api->getPlaylistTracks($playlist_id, ["offset" => $offset, "limit" => $chunk]);
+		$items = $tracks_json->items;
+		foreach ($items as $item) {
+			$artists = implode(", ", array_column($item->track->artists, "name"));
+			$track = $item->track->name;
+			$playlist_tracks[$item->track->uri][] = $playlist_id;
+		}
+		$offset += $chunk;
+		$total = $tracks_json->total;
+	} while ($offset <= $total);
+
+	return $playlist_tracks;
 }
 
 function set_progress($id, $value) {
@@ -146,135 +183,70 @@ function flush_output() {
 	ob_end_flush(); flush();
 }
 
-function get_playlist_tracks_all($api, $url) {
-	$all_tagged_tracks = [];
-	$get_playlist_tracks = function($api, $url) use (&$all_tagged_tracks) {
-		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
-		$result = $api->lastResponse['body'];
-		$json_result = json_decode(json_encode($result), true);
+function populate_untagged_playlist($api, $library, $all_tagged, $untagged_playlist) {
+	function library_minus_tagged($library, $tagged) {
+		return array_diff(array_keys($library), array_keys($tagged));
+	}
 
-		$items = $json_result["items"];
-		foreach ($items as $item) {
-			$artists = implode(", ", array_column($item["track"]["artists"], "name"));
-			$track = $item["track"]["name"];
-			$all_tagged_tracks[$item["track"]["id"]][] = $url;
-		}
-
-		$next = $result->next;
-		if ($next) {
-			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
-			return $next;
-		}
-	};
-
-	do {
-		$next = $get_playlist_tracks($api, $url);
-	} while ($url = $next);
-
-	return $all_tagged_tracks;
-}
-
-function get_playlists_all($api, $pattern, $exclude = "MichaelDayah") {
-	$url = "/v1/me/playlists?limit=50";
-	$playlists = [];
-	$get_playlists = function($api, $url) use (&$playlists, $pattern, $exclude) {
-		$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
-		$result = $api->lastResponse['body'];
-		$json_result = json_decode(json_encode($result), true);
-
-		$items = $json_result["items"];
-		foreach ($items as $item) {
-			$name = $item["name"];
-			if (stripos($name, $pattern) === 0 && $name !== $pattern . $exclude)
-				$playlists[$name] = parse_url($item["tracks"]["href"], PHP_URL_PATH);
-		}
-
-		$next = $result->next;
-		if ($next) {
-			$next = parse_url($next, PHP_URL_PATH) . "?" . parse_url($next, PHP_URL_QUERY);
-			return $next;
-		}
-	};
-
-	do {
-		$next = $get_playlists($api, $url);
-	} while ($url = $next);
-
-	return $playlists;
-}
-
-function create_untagged_playlist($api, $name) {
-	$url = "/v1/me";
-	$api->lastResponse = $api->request->api("GET", $url, [], $api->authHeaders());
-	$result = $api->lastResponse['body'];
-	$user_id = $result->id;
-
-	$url = "/v1/users/" . $user_id . "/playlists";
-	$api->lastResponse = $api->request->api("POST", $url, json_encode(["name" => $name]), $api->authHeaders());
-	$result = $api->lastResponse['body'];
-	$playlist_url = $result->href;
-	return parse_url($playlist_url, PHP_URL_PATH) . "/tracks";
-}
-
-function fill_untagged_playlist($api, $library, $playlists, $all_tagged, $untagged_playlist) {
 	$CHUNK_SIZE = 50; // they claim max 100, but that should be done in the request body
-	$url = $untagged_playlist;
 
 	// first empty the Untagged playlist
-	$api->lastResponse = $api->request->api("PUT", $url . "?uris=", [], $api->authHeaders());
-	$result = $api->lastResponse['body'];
+	$api->replacePlaylistTracks($untagged_playlist, []);
 
 	// then put in the new tracks 50 at a time
 	$untagged = library_minus_tagged($library, $all_tagged);
-	$untagged = preg_filter('/^/', 'spotify:track:', $untagged);
-	$chunked_tracks = array_chunk($untagged, $CHUNK_SIZE, true);
-	foreach ($chunked_tracks as $chunk) {
-		$assembled_url = $url . "?uris=" . implode(",", $chunk);
-		$api->lastResponse = $api->request->api("POST", $assembled_url, [], $api->authHeaders());
-		$result = $api->lastResponse['body'];
-	}
+	$chunked_tracks = array_chunk(array_values($untagged), $CHUNK_SIZE, true);
+	foreach ($chunked_tracks as $chunk)
+		$api->addPlaylistTracks($untagged_playlist, array_values($chunk));
 	return count($untagged);
 }
 
-function library_minus_tagged($library, $tagged) {
-	return array_diff(array_keys($library), array_keys($tagged));
+function get_track_info($uri) {
+	global $api;
+	try {
+		$track = $api->getTrack($uri);
+	} catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+		return $uri;
+	}
+	$artists = $track->artists;
+	return implode(", ", array_column($artists, "name")) . " - " . $track->name;
 }
 
-function get_artist_title($track) {
-	return "<a href='{$track["url"]}'>" . $track["artists"] . " - " . $track["title"] . "</a>";
-}
+function display_tracks_in_multiple_playlists($tagged, $library, $all_playlists) {
+	function get_artist_title($track) {
+		return "<a href='{$track["url"]}'>" . $track["artists"] . " - " . $track["title"] . "</a>";
+	}
+	function lookup_playlists($lists, $all_playlists) {
+		$formatted = [];
+		foreach ($lists as $playlist) {
+			$formatted[] = "<code>" . array_search($playlist, $all_playlists) . "</code>";
+		}
+		return $formatted;
+	}
 
-function display_tracks_in_multiple_playlists($tracks, $library, $all_playlists) {
 	$unavailable = [];
 	$notinlibrary = [];
 	$multiple = [];
-	foreach ($tracks as $id=>$playlists) {
-		if (!array_key_exists($id, $library))
-			$notinlibrary[] = "<li>" . $id . " is on " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
-		elseif (!$library[$id]["available"])
-			$unavailable[] = "<li>" . get_artist_title($library[$id]) . "</li>\n";
+	foreach ($tagged as $uri=>$playlists) {
+		if (!array_key_exists($uri, $library))
+			$notinlibrary[] = "<li>" . get_track_info($uri) . " is on " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
+		elseif ($library[$uri]["available"] === 0)
+			$unavailable[] = "<li>" . get_artist_title($library[$uri]) . "</li>\n";
 
 		if (count($playlists) > 1) {
-			$multiple[] = "<li>" . get_artist_title($library[$id]) . " in " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
+			$multiple[] = "<li>" . get_artist_title($library[$uri]) . " in " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
 		}
 	}
 
 	echo "<h3>Songs in multiple playlists</h3>\n";
 	echo "<ul>\n" , implode("", $multiple), "</ul>\n";
 
+// Not reliable, many songs with no markets and no preview URL work fine
 //	echo "<h3>Unavailable songs saved to your library</h3>\n";
 //	echo "<ul>\n" , implode("", $unavailable), "</ul>\n";
 
 	echo "<h3>Songs on playlists but not saved to your library</h3>\n";
 	echo "<ul>\n" , implode("", $notinlibrary), "</ul>\n";
-}
-
-function lookup_playlists($lists, $all_playlists) {
-	$formatted = [];
-	foreach ($lists as $playlist) {
-		$formatted[] = "<code>" . array_search($playlist, $all_playlists) . "</code>";
-	}
-	return $formatted;
 }
 
 ?>
