@@ -13,6 +13,8 @@
   <p>With Tagify, your existing playlists stay untouched, but a new playlist is created containing any music saved in your library which isn't also on a playlist with the prefix <code>tag:</code></p>
   <p>Simply populate these new <code>tag:indie</code>, <code>tag:electronic</code>, or <code>tag:whatever you want</code> playlists you create with songs, and watch them disappear from a new <code>tag:untagged</code> playlist this tool creates which is simply your saved library minus your tagged songs.</p>
 
+  <p><a href="sample-output.html">View sample output</a> before trying it.</p>
+
   <form action="/run.php"><p><button type="submit">Create my Untagged playlist</button></p></form>
  </body>
 </html>

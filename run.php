@@ -83,7 +83,10 @@ function run_tagger($api) {
 	$untagged_playlist = get_playlists($api, $PREFIX . $UNTAGGED);
 	if (count($untagged_playlist) === 0) {
 		echo "<p>Couldn't find a playlist with the name <code>", $PREFIX . $UNTAGGED, "</code> so it is being created.</p>\n";
-		$untagged_playlist = $api->createPlaylist(["name" => $PREFIX . $UNTAGGED])->id;
+		$untagged_playlist = $api->createPlaylist([
+			"name" => $PREFIX . $UNTAGGED,
+			"description" => "Generated automatically by tagify.me from all liked songs minus songs on tag: playlists."
+		])->id;
 	} else
 		$untagged_playlist = current($untagged_playlist);
 
