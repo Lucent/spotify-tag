@@ -49,7 +49,7 @@ if (!isset($_SESSION["token"])) {
 }
 
 function run_tagger($api) {
-	global $PREFIX, $UNTAGGED;
+	global $PREFIX, $UNTAGGED, $UNSAVED;
 
 	echo "<p>Loading tracks from library.</p>\n";
 	echo "<p><progress id='Library'></progress></p>\n";
@@ -83,6 +83,8 @@ function run_tagger($api) {
 		echo "<p class='Error'>You created <code>tag:</code> playlists, but they did not contain any tracks. Add tracks to those playlists and run this tool again.</p>\n";
 		die();
 	}
+
+	unset($playlists[$PREFIX . $UNSAVED]);
 	display_tracks_in_multiple_playlists($all_tagged_tracks, $library, $playlists);
 
 	flush_output();
@@ -247,7 +249,10 @@ function display_tracks_in_multiple_playlists($tagged, $library, $all_playlists)
 			$unavailable[] = "<li>" . get_artist_title($library[$uri]) . "</li>\n";
 
 		if (count($playlists) > 1) {
-			$multiple[] = "<li>" . get_artist_title($library[$uri]) . " in " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
+			if (array_key_exists($uri, $library))
+				$multiple[] = "<li>" . get_artist_title($library[$uri]) . " in " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
+			else
+				$multiple[] = "<li>" . get_track_info($uri) . " in " . implode(", ", lookup_playlists($playlists, $all_playlists)) . "</li>\n";
 		}
 	}
 
