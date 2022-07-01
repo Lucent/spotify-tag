@@ -19,9 +19,4 @@ a				{ color: rgb(200, 200, 255); }
 button			{ color: white; font-size: 1em; font-weight: bold; border-radius: 3em; background-color: #1ed760; text-transform: uppercase; border: none; padding: 1em 2em; margin: auto; letter-spacing: 0.1em; }
 
 /*** Footer ***/
-footer, addr			{ font-family: sans-serif; }
-footer					{ display: flex; justify-content: center; align-items: baseline; text-transform: uppercase; }
-footer a, footer select	{ margin: 0 0.3em; text-decoration: inherit; }
-footer a:hover, addr a:hover	{ text-decoration: underline; }
-addr					{ display: block; text-align: center; color: #999; margin: 0.7em; }
-addr a					{ color: inherit; text-decoration: inherit; }
+footer			{ color: #999; font-family: sans-serif; display: flex; justify-content: center; font-size: small; }

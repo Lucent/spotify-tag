@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cf42504353114c5bae8fd92975a6e8ac",
+    "content-hash": "cadfa95f63f5ff44260992c466480d43",
     "packages": [
         {
             "name": "jwilsson/spotify-web-api-php",
@@ -65,5 +65,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "plugin-api-version": "2.2.0"
 }
