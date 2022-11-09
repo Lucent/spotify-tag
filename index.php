@@ -4,6 +4,13 @@
   <link href="https://fonts.googleapis.com/css?family=Nunito:700,900" rel="stylesheet">
   <title>Use Playlists as Tags on Spotify</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-163783416-1"></script>
+  <script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'UA-163783416-1');
+  </script>
  </head>
  <body>
   <h1>tagify.me</h1>
@@ -16,5 +23,11 @@
   <p><a href="sample-output.html">View sample output</a> before trying it.</p>
 
   <form action="/run.php"><p><button type="submit">Create my Untagged playlist</button></p></form>
+
+  <p><a href="logout.php">Log out</a></p>
+
+  <footer>
+   <addr>Created by <a href="https://dayah.com">Michael Dayah</a>. Email contact at tagify.me.</addr>
+  </footer>
  </body>
 </html>
