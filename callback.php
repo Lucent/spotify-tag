@@ -1,12 +1,11 @@
 <?php
 
 require 'vendor/autoload.php';
-require 'secrets.php';
 
 $session = new SpotifyWebAPI\Session(
-	$CLIENT_ID,
-	$CLIENT_SECRET,
-	'https://tagify.me/callback.php'
+	getenv('SPOTIFY_CLIENT_ID'),
+	getenv('SPOTIFY_CLIENT_SECRET'),
+	getenv('APP_URL') . '/callback.php'
 );
 
 $scopes = [

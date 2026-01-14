@@ -4,13 +4,7 @@
   <link href="https://fonts.googleapis.com/css?family=Nunito:700,900" rel="stylesheet">
   <title>Use Playlists as Tags on Spotify</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-163783416-1"></script>
-  <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag() { dataLayer.push(arguments); }
-  gtag('js', new Date());
-  gtag('config', 'UA-163783416-1');
-  </script>
+  <script defer data-domain="tagify.me" src="https://plausible.io/js/script.js"></script>
  </head>
  <body>
   <h1>tagify.me</h1>

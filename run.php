@@ -10,22 +10,22 @@ error_reporting(E_ALL);
   <title>Use Playlists as Tags on Spotify</title>
   <link rel="stylesheet" href="subpage.css">
   <link href="https://fonts.googleapis.com/css?family=Nunito:700,900" rel="stylesheet">
+  <script defer data-domain="tagify.me" src="https://plausible.io/js/script.js"></script>
  </head>
  <body>
   <h1>tagify.me</h1>
   <h2>Use Playlists as Tags on Spotify</h1>
 <?php
 require 'vendor/autoload.php';
-require 'secrets.php';
 
 $PREFIX = "tag:";
 $UNTAGGED = "untagged";
 $UNSAVED = "unsaved";
 
 $session = new SpotifyWebAPI\Session(
-	$CLIENT_ID,
-	$CLIENT_SECRET,
-	'https://tagify.me/callback.php'
+	getenv('SPOTIFY_CLIENT_ID'),
+	getenv('SPOTIFY_CLIENT_SECRET'),
+	getenv('APP_URL') . '/callback.php'
 );
 
 $scopes = [

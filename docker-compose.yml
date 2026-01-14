@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: tagify-app
+    restart: unless-stopped
+    env_file: .env
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: tagify-tunnel
+    restart: unless-stopped
+    depends_on:
+      - app
+    command: tunnel run --token ${TUNNEL_TOKEN}
