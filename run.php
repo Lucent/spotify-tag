@@ -1,21 +1,8 @@
 <?php
-header('Cache-Control: no-cache');
-header('Content-type: text/html; charset=utf-8');
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-?>
-<html>
- <head>
-  <title>Use Playlists as Tags on Spotify</title>
-  <link rel="stylesheet" href="subpage.css">
-  <link href="https://fonts.googleapis.com/css?family=Nunito:700,900" rel="stylesheet">
-  <script defer data-domain="tagify.me" src="https://plausible.io/js/script.js"></script>
- </head>
- <body>
-  <h1>tagify.me</h1>
-  <h2>Use Playlists as Tags on Spotify</h1>
-<?php
+
 require 'vendor/autoload.php';
 
 $PREFIX = "tag:";
@@ -36,24 +23,42 @@ $scopes = [
 ];
 $authorizeUrl = $session->getAuthorizeUrl(["scope" => $scopes]);
 
-$api = new SpotifyWebAPI\SpotifyWebAPI(["auto_refresh" => true]);
-
 session_start();
 
 if (!isset($_SESSION["token"])) {
 	header('Location: ' . $authorizeUrl);
 	die();
-} else {
-	$api->setAccessToken($_SESSION["token"]);
-	run_tagger($api);
 }
+
+// Output can now be sent safely
+header('Cache-Control: no-cache');
+header('Content-type: text/html; charset=utf-8');
+@apache_setenv('no-gzip', '1');
+// Disable all output buffering and enable implicit flush
+while (ob_get_level()) ob_end_flush();
+ob_implicit_flush(1);
+?>
+<html>
+ <head>
+  <title>Use Playlists as Tags on Spotify</title>
+  <link rel="stylesheet" href="subpage.css">
+  <link href="https://fonts.googleapis.com/css?family=Nunito:700,900" rel="stylesheet">
+  <script defer data-domain="tagify.me" src="https://plausible.io/js/script.js"></script>
+ </head>
+ <body>
+  <h1>tagify.me</h1>
+  <h2>Use Playlists as Tags on Spotify</h1>
+<?php
+$api = new SpotifyWebAPI\SpotifyWebAPI(["auto_refresh" => true]);
+$api->setAccessToken($_SESSION["token"]);
+run_tagger($api);
 
 function run_tagger($api) {
 	global $PREFIX, $UNTAGGED, $UNSAVED;
 
 	echo "<p>Loading tracks from library.</p>\n";
 	echo "<p><progress id='Library'></progress></p>\n";
-	flush_output();
+	flush();
 	$library = get_saved_tracks($api);
 	if (count($library) > 0) {
 		echo "<p>Library contains ", count($library), " saved tracks.</p>\n";
@@ -62,7 +67,7 @@ function run_tagger($api) {
 		die();
 	}
 
-	flush_output();
+	flush();
 	$playlists = get_playlists($api, $PREFIX, $UNTAGGED);
 	if (count($playlists) > 0) {
 		echo "<p>", count($playlists), " of your playlists are prefixed with <code>", $PREFIX, "</code> and will be treated as tags.</p>\n";
@@ -87,7 +92,7 @@ function run_tagger($api) {
 	unset($playlists[$PREFIX . $UNSAVED]);
 	display_tracks_in_multiple_playlists($all_tagged_tracks, $library, $playlists);
 
-	flush_output();
+	flush();
 	$untagged_playlist = get_playlists($api, $PREFIX . $UNTAGGED);
 	if (count($untagged_playlist) === 0) {
 		echo "<p>Couldn't find a playlist with the name <code>", $PREFIX . $UNTAGGED, "</code> so it is being created.</p>\n";
@@ -98,7 +103,7 @@ function run_tagger($api) {
 	} else
 		$untagged_playlist = current($untagged_playlist);
 
-	flush_output();
+	flush();
 	$untagged = array_diff(array_keys($library), array_keys($all_tagged_tracks));
 	$untagged_count = populate_playlist($api, $untagged, $untagged_playlist);
 	echo "<p>Placed ", $untagged_count, " untagged tracks in the <code>", $PREFIX . $UNTAGGED, "</code> playlist.</p>\n";
@@ -186,15 +191,6 @@ function get_playlist_tracks($api, $playlist_id) {
 
 function set_progress($id, $value) {
 	echo "<script>document.getElementById('", $id, "').value = ", $value, ";</script>\n";
-	flush_output();
-}
-
-function flush_output() {
-	if (!ob_get_contents())
-		return;
-	$junk = "<!-- long string to flush output buffer -->";
-	echo str_repeat($junk, intval(4096 / strlen($junk))), "\n";
-	ob_end_flush();
 	flush();
 }
 
