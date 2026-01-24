@@ -4,6 +4,8 @@ services:
     container_name: tagify-app
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - ./public:/var/www/html:ro
 
   tunnel:
     image: cloudflare/cloudflared:latest
