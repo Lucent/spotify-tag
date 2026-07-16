@@ -1,16 +1,49 @@
+x-logging: &logging
+  driver: local
+  options:
+    max-size: 100m
+    max-file: 5
+
 services:
-  app:
-    build: .
-    container_name: tagify-app
+  app:                          # stock node + mounted code, no image build; zero npm deps (built-in fetch covers the Spotify API)
+    image: node:alpine
     restart: unless-stopped
-    env_file: .env
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    logging: *logging
+    user: "1000:1000"
+    working_dir: /app
+    command: ["node", "server/app.mjs"]
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=80   # lets the unprivileged user bind :80 so the tunnel's existing app:80 route still works
+    environment:
+      - PORT=80
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - APP_URL=${APP_URL}
+      - NODE_OPTIONS=--max-old-space-size=64
     volumes:
-      - ./public:/var/www/html:ro
+      - ./server:/app/server:ro
+      - ./public:/app/public:ro
 
   tunnel:
     image: cloudflare/cloudflared:latest
-    container_name: tagify-tunnel
     restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    logging: *logging
     depends_on:
       - app
     command: tunnel run --token ${TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
